@@ -1,0 +1,24 @@
+name: Web Site Bot Testi
+
+on:
+  workflow_dispatch:
+    inputs:
+      hedef_url:
+        description: 'Bot basmak istedigin URL'
+        required: true
+        default: 'https://httpbin.org/ip'
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Kodlari Klonla
+      uses: actions/checkout@v3
+    - name: Python Kurulumu
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - name: Gerekli Kutuphaneleri Yukle
+      run: pip install aiohttp
+    - name: Botu Calistir
+      run: python bot.py "${{ github.event.inputs.hedef_url }}"
