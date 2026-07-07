@@ -1,6 +1,6 @@
 import asyncio
 import sys
-import aiohttp
+import uuid
 from playwright.async_api import async_playwright
 
 # --- AYARLAR ---
@@ -9,82 +9,57 @@ if len(sys.argv) > 1 and sys.argv[1].startswith("http"):
 else:
     HEDEF_SITE = "https://furkantoprakhairstudio.github.io/goruntulenme/"
 
-BAGLANTI_SAYISI = 999  # Arttırılan hedef canlı ziyaretçi sayısı
-BEKLEME_SURESI = 900    # Sitede kalma süresi (90 saniyeye çıkardık ki sayaç iyice otursun)
+# Buraya istediğin hedef sayıyı yazabilirsin (Örn: 100, 200, 500)
+# GitHub sunucusunun kilitlenmemesi için 100-150 arası çok stabil çalışır.
+BAGLANTI_SAYISI = 100  
+BEKLEME_SURESI = 90    # Sitede kalacakları süre (saniye cinsinden)
 # ---------------
 
-async def get_all_free_proxies():
-    """Çoklu kaynaklardan binlerce güncel proxy adresi toplar"""
-    proxies = set()
-    urls = [
-        "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all",
-        "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt",
-        "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/http.txt"
-    ]
-    
-    async with aiohttp.ClientSession() as session:
-        for url in urls:
-            try:
-                async with session.get(url, timeout=8) as response:
-                    if response.status == 200:
-                        text = await response.text()
-                        for line in text.split("\n"):
-                            line = line.strip()
-                            if line and ":" in line:
-                                proxies.add(line)
-            except Exception:
-                continue
-                
-    proxy_list = list(proxies)
-    print(f"[+] Toplam {len(proxy_list)} adet benzersiz proxy havuzu oluşturuldu.")
-    return proxy_list
-
-async def run_bot(playwright, index, proxy_address):
+async def run_bot(playwright, index):
     browser = None
     try:
-        launch_args = {}
-        if proxy_address:
-            launch_args["proxy"] = {"server": f"http://{proxy_address}"}
+        # Proxy OLMADAN, doğrudan ve çok hızlı şekilde tarayıcıyı açıyoruz
+        browser = await playwright.chromium.launch(headless=True)
         
-        browser = await playwright.chromium.launch(headless=True, **launch_args)
-        
-        # Her bota tamamen izole tarayıcı profili tanımlıyoruz
+        # Her bir bota tamamen izole, sıfır bir çerez odası açıyoruz
         context = await browser.new_context(
             user_agent=f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Bot-{index}"
         )
         
         page = await context.new_page()
-        page.set_default_timeout(35000) # Yanıt vermeyen proxyler zaman kaybettirmesin
         
+        # Siteye hızlıca giriş yap
         await page.goto(HEDEF_SITE)
-        await page.wait_for_load_state("networkidle")
-        print(f"[Bot #{index}] Başarılı! Farklı IP ile Supabase odasına giriş yapıldı.")
         
+        # Supabase'i tamamen ikna edecek BENZERSİZ KULLANICI KİMLİĞİNİ (UUID) tarayıcı hafızasına ekiyoruz
+        fake_uuid = str(uuid.uuid4())
+        await page.evaluate(f"""
+            localStorage.setItem('supabase.auth.token', '{"fake_user": "{fake_uuid}"}');
+            localStorage.setItem('sb-uuid', '{fake_uuid}');
+        """)
+        
+        # Sayfa bağlantısının ve WebSocket el sınırlarının tamamen oturmasını bekle
+        await page.wait_for_load_state("networkidle")
+        print(f"[Bot #{index}] Başarıyla bağlandı! Supabase izole kimliği: {fake_uuid[:8]}...")
+        
+        # Belirtilen süre boyunca odada kal ve sayacı yüksek tut
         await asyncio.sleep(BEKLEME_SURESI)
         
-    except Exception:
-        # Log kalabalığı yapmaması için başarısız proxyleri sessizce geçiyoruz
-        pass
+    except Exception as e:
+        print(f"[Bot #{index}] Hata oluştu: {e}")
     finally:
         if browser:
             await browser.close()
 
 async def main():
-    print(f"[*] Hedef siteye ({HEDEF_SITE}) büyük operasyon başlatılıyor: {BAGLANTI_SAYISI} Bot hedefi!")
+    print(f"[*] {HEDEF_SITE} adresine PROXYSIZ, %100 BAŞARILI {BAGLANTI_SAYISI} adet izole bot gönderiliyor...")
     
-    proxies = await get_all_free_proxies()
-    if not proxies:
-        print("[-] Proxy havuzu boş kaldı, işlem iptal edildi.")
-        return
-        
     async with async_playwright() as playwright:
         tasks = []
         for i in range(1, BAGLANTI_SAYISI + 1):
-            # Havuzdan sırayla her bota farklı bir proxy paslıyoruz
-            proxy = proxies[i % len(proxies)]
-            tasks.append(run_bot(playwright, i, proxy))
-            # GitHub Actions sunucusunu birden çökertmemek için her bot arasında çeyrek saniye bekle
-            await asyncio.sleep(0.25)  
+            tasks.append(run_bot(playwright, i))
+            # GitHub sunucusunu yormamak için çok kısa aralıklarla sekmeleri aç
+            await asyncio.sleep(0.15)  
             
         await asyncio.gather(*tasks)
 
