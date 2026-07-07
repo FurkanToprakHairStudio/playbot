@@ -9,8 +9,8 @@ if len(sys.argv) > 1 and sys.argv[1].startswith("http"):
 else:
     HEDEF_SITE = "https://furkantoprakhairstudio.github.io/goruntulenme/"
 
-BAGLANTI_SAYISI = 100  # Arttırılan hedef canlı ziyaretçi sayısı
-BEKLEME_SURESI = 90    # Sitede kalma süresi (90 saniyeye çıkardık ki sayaç iyice otursun)
+BAGLANTI_SAYISI = 999  # Arttırılan hedef canlı ziyaretçi sayısı
+BEKLEME_SURESI = 900    # Sitede kalma süresi (90 saniyeye çıkardık ki sayaç iyice otursun)
 # ---------------
 
 async def get_all_free_proxies():
