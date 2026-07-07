@@ -19,23 +19,26 @@ async def run_bot(playwright, index):
         browser = await playwright.chromium.launch(headless=True)
         
         context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Bot-" + str(index)
+            user_agent=f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Bot-{index}"
         )
         
         page = await context.new_page()
         await page.goto(HEDEF_SITE)
         
-        # Format hatasını engellemek için JavaScript stringini dışarıda birleştiriyoruz
-        fake_uuid = str(uuid.uuid4())
-        js_code = """
-            localStorage.setItem('supabase.auth.token', '{"fake_user": "' + fake_uuid + '"}');
-            localStorage.setItem('sb-uuid', '""" + fake_uuid + """');
-        """
+        # Python'da benzersiz UUID üretiyoruz
+        generated_id = str(uuid.uuid4())
         
-        await page.evaluate(js_code)
+        # JavaScript tarafına değişkeni Playwright argümanı olarak güvenli bir şekilde paslıyoruz
+        await page.evaluate("""(uid) => {
+            localStorage.setItem('supabase.auth.token', JSON.stringify({ fake_user: uid }));
+            localStorage.setItem('sb-uuid', uid);
+        }""", generated_id)
+        
+        # Ağ bağlantılarının ve Supabase Realtime WebSocket akışının tamamen oturmasını bekle
         await page.wait_for_load_state("networkidle")
-        print(f"[Bot #{index}] Başarıyla bağlandı! Supabase izole kimliği: {fake_uuid[:8]}...")
+        print(f"[Bot #{index}] Başarıyla bağlandı! Supabase izole kimliği aktif.")
         
+        # Sitede belirtilen süre boyunca kalıp sayacı şişiriyoruz
         await asyncio.sleep(BEKLEME_SURESI)
         
     except Exception as e:
@@ -51,6 +54,7 @@ async def main():
         tasks = []
         for i in range(1, BAGLANTI_SAYISI + 1):
             tasks.append(run_bot(playwright, i))
+            # Sunucuyu anlık yormamak için kısa aralıklarla sekmeleri sıraya koy
             await asyncio.sleep(0.15)  
             
         await asyncio.gather(*tasks)
