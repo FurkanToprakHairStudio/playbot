@@ -19,7 +19,7 @@ jobs:
     - name: Gerekli Kutuphaneleri Yukle
       run: |
         python -m pip install --upgrade pip
-        pip install playwright
+        pip install playwright aiohttp
         playwright install chromium --with-deps --force
 
     - name: Botu Calistir
