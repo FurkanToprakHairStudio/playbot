@@ -9,40 +9,33 @@ if len(sys.argv) > 1 and sys.argv[1].startswith("http"):
 else:
     HEDEF_SITE = "https://furkantoprakhairstudio.github.io/goruntulenme/"
 
-# Buraya istediğin hedef sayıyı yazabilirsin (Örn: 100, 200, 500)
-# GitHub sunucusunun kilitlenmemesi için 100-150 arası çok stabil çalışır.
-BAGLANTI_SAYISI = 100  
-BEKLEME_SURESI = 90    # Sitede kalacakları süre (saniye cinsinden)
+BAGLANTI_SAYISI = 100  # Gönderilecek net bot sayısı
+BEKLEME_SURESI = 90    # Sitede kalma süresi (90 saniye)
 # ---------------
 
 async def run_bot(playwright, index):
     browser = None
     try:
-        # Proxy OLMADAN, doğrudan ve çok hızlı şekilde tarayıcıyı açıyoruz
         browser = await playwright.chromium.launch(headless=True)
         
-        # Her bir bota tamamen izole, sıfır bir çerez odası açıyoruz
         context = await browser.new_context(
-            user_agent=f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Bot-{index}"
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Bot-" + str(index)
         )
         
         page = await context.new_page()
-        
-        # Siteye hızlıca giriş yap
         await page.goto(HEDEF_SITE)
         
-        # Supabase'i tamamen ikna edecek BENZERSİZ KULLANICI KİMLİĞİNİ (UUID) tarayıcı hafızasına ekiyoruz
+        # Format hatasını engellemek için JavaScript stringini dışarıda birleştiriyoruz
         fake_uuid = str(uuid.uuid4())
-        await page.evaluate(f"""
-            localStorage.setItem('supabase.auth.token', '{"fake_user": "{fake_uuid}"}');
-            localStorage.setItem('sb-uuid', '{fake_uuid}');
-        """)
+        js_code = """
+            localStorage.setItem('supabase.auth.token', '{"fake_user": "' + fake_uuid + '"}');
+            localStorage.setItem('sb-uuid', '""" + fake_uuid + """');
+        """
         
-        # Sayfa bağlantısının ve WebSocket el sınırlarının tamamen oturmasını bekle
+        await page.evaluate(js_code)
         await page.wait_for_load_state("networkidle")
         print(f"[Bot #{index}] Başarıyla bağlandı! Supabase izole kimliği: {fake_uuid[:8]}...")
         
-        # Belirtilen süre boyunca odada kal ve sayacı yüksek tut
         await asyncio.sleep(BEKLEME_SURESI)
         
     except Exception as e:
@@ -58,7 +51,6 @@ async def main():
         tasks = []
         for i in range(1, BAGLANTI_SAYISI + 1):
             tasks.append(run_bot(playwright, i))
-            # GitHub sunucusunu yormamak için çok kısa aralıklarla sekmeleri aç
             await asyncio.sleep(0.15)  
             
         await asyncio.gather(*tasks)
