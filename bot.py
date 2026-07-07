@@ -10,7 +10,7 @@ else:
     HEDEF_SITE = "https://furkantoprakhairstudio.github.io/goruntulenme/"
 
 BAGLANTI_SAYISI = 150  # Her bir Actions çalışmasında hedeflenen maksimum bot sayısı
-BEKLEME_SURESI = 120   # Sitede kalma süresi (2 dakika yaptık ki sen diğer workflowları başlatırken eskiler düşmesin)
+BEKLEME_SURESI = 500   # Sitede kalma süresi (2 dakika yaptık ki sen diğer workflowları başlatırken eskiler düşmesin)
 # ---------------
 
 async def fetch_proxies():
