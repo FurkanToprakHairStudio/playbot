@@ -5,7 +5,6 @@ on:
 
 jobs:
   run-bot:
-    # Tekrar en güncel ve kararlı imaja dönüyoruz
     runs-on: ubuntu-latest
 
     steps:
@@ -20,8 +19,7 @@ jobs:
     - name: Gerekli Kutuphaneleri Yukle
       run: |
         python -m pip install --upgrade pip
-        pip install playwright
-        # İşte sihirli dokunuş: --force parametresi ile apt paket hatalarını bypass ediyoruz
+        pip install playwright aiohttp  # Her iki kütüphaneyi de kuruyoruz
         playwright install chromium --with-deps --force
 
     - name: Botu Calistir
