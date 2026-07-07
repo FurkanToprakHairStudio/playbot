@@ -4,7 +4,7 @@ import aiohttp
 
 # --- AYARLAR ---
 # Bot yollamak istediğin web sitesinin adresi (Test için kendi siteni veya herhangi bir adresi yazabilirsin)
-HEDEF_SITE = "https://httpbin.org/ip" 
+HEDEF_SITE = "https://furkantoprakhairstudio.github.io/goruntulenme/" 
 BAGLANTI_SAYISI = 20  # Gönderilecek toplam bot/istek sayısı
 # ---------------
 
